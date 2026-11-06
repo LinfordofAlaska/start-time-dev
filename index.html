@@ -159,7 +159,7 @@ details[open] summary{margin-bottom:12px}
     <div class="signedout" id="signedout">
       <p>Full song if you're signed in to Spotify in this browser, otherwise a short preview. <a id="open" href="#" target="_blank" rel="noopener">Open in Spotify</a></p>
     </div>
-    <a class="btn ghost" id="makeOwn" href="./">Send this song from your own moment</a>
+    <a class="btn ghost" id="makeOwn" href="./">Make your own link for any song</a>
     <p class="small" id="byline" hidden>From <a href="https://www.linkedin.com/pulse/unisonarity-benjamin-linford-cfa-az4yc/" target="_blank" rel="noopener">Unisonarity</a>, by <a href="https://open.spotify.com/artist/6ddQgZhBS2xsynMqQTm87V" target="_blank" rel="noopener">Ben Linford</a> &middot; <a href="https://open.spotify.com/playlist/6a1oImkmuQMOuLcPSnE5Co" target="_blank" rel="noopener">Spotify</a> &middot; <a href="https://suno.com/playlist/faa0098b-5872-4598-9124-b0180282cb1b" target="_blank" rel="noopener">Suno</a></p>
   </main>
 
@@ -344,7 +344,6 @@ details[open] summary{margin-bottom:12px}
     document.body.classList.add('isplay');
     ping('view', (params.get('s') || 'direct').replace(/[^a-z]/g,'').slice(0,12) || 'direct');
     $('open').addEventListener('click', function(){ ping('open-spotify'); });
-    $('makeOwn').href = './?from=' + id + (type === 'episode' ? '&type=episode' : '');
     $('makeOwn').addEventListener('click', function(){ ping('make-own'); });
     $('play').hidden = false; $('footMake').hidden = true; $('footPlay').hidden = false;
     document.title = 'Cue: starts at ' + fmt(startSec);
