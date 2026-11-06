@@ -410,11 +410,10 @@ details[open] summary{margin-bottom:12px}
              after the song ends), move it to the start time. */
           if(mode === 'full' && startSec > 3){
             var now = Date.now();
-            if(!d.isPaused && d.position < (startSec - 3) * 1000 && now - lastSeek > 2500){ lastSeek = now; c.seek(startSec); }
+            if(!d.isPaused && d.position < (startSec - 3) * 1000 && now - lastSeek > 8000){ lastSeek = now; c.seek(startSec); }
           }
         });
-        /* Park the embed at the cue so its own play button starts there too. */
-        c.addListener('ready', function(){ if(startSec > 3 && mode === 'unknown') load(startSec); });
+
       });
     };
     $('go').addEventListener('click', function(){
