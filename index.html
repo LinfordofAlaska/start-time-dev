@@ -54,6 +54,7 @@ button,.btn{font:inherit;font-weight:600;border:0;border-radius:10px;padding:14p
 button:hover,.btn:hover{filter:brightness(1.06)}
 .ghost,.ghost:hover{box-shadow:none}
 input[type=text]:focus{border-color:var(--cue);outline:none;box-shadow:0 0 0 3px rgba(218,145,46,.18)}
+input[type=text][aria-invalid=true]{border-color:var(--warn);box-shadow:0 0 0 3px rgba(227,160,106,.16)}
 .cueline{position:relative;height:2px;border-radius:1px;margin:2px 0 4px;background:linear-gradient(90deg,var(--copper) 0 36%,var(--steel) 36% 100%)}
 .cueline span{position:absolute;left:36%;top:-5px;width:3px;height:12px;border-radius:2px;background:var(--cue);transform:translateX(-50%);box-shadow:0 0 10px rgba(218,145,46,.6)}
 .ghost{background:transparent;color:var(--text);border:1px solid var(--steel-dim)}
@@ -202,7 +203,11 @@ details[open] summary{margin-bottom:12px}
     if(!s) return null;
     if(/^\d+$/.test(s)) return parseInt(s,10);
     var m = s.match(/^(?:(\d+):)?(\d{1,2}):(\d{1,2})$/);
-    if(m) return (parseInt(m[1]||0,10)*3600)+(parseInt(m[2],10)*60)+parseInt(m[3],10);
+    if(m){
+      var hh = parseInt(m[1]||0,10), mm = parseInt(m[2],10), ss = parseInt(m[3],10);
+      if(ss > 59 || (m[1] !== undefined && mm > 59)) return null;
+      return hh*3600 + mm*60 + ss;
+    }
     m = s.match(/^(?:(\d+)h)?\s*(?:(\d+)m)?\s*(?:(\d+)s)?$/);
     if(m && (m[1]||m[2]||m[3])) return (parseInt(m[1]||0,10)*3600)+(parseInt(m[2]||0,10)*60)+parseInt(m[3]||0,10);
     return null;
@@ -215,10 +220,28 @@ details[open] summary{margin-bottom:12px}
   function parseSpotify(s){
     s = String(s||'').trim();
     var m = s.match(/spotify:(track|episode):([A-Za-z0-9]{22})/) ||
-            s.match(/open\.spotify\.com\/(?:intl-[a-z]+\/)?(track|episode)\/([A-Za-z0-9]{22})/);
+            s.match(/open\.spotify\.com\/(?:embed\/)?(?:intl-[a-z]+\/)?(track|episode)\/([A-Za-z0-9]{22})/);
     if(m) return {type:m[1], id:m[2]};
     if(/^[A-Za-z0-9]{22}$/.test(s)) return {type:'track', id:s};
     return null;
+  }
+
+  /* Say what is wrong with a pasted link, in plain words, so the person knows what to copy instead. */
+  function diagnose(s){
+    s = String(s||'').trim();
+    if(!s) return 'Paste a Spotify song link first. In Spotify, choose Share, then Copy song link.';
+    if(/spotify\.link\//i.test(s)) return 'That\u2019s a Spotify short link. Open it, then copy the song link again from Share, or paste the open.spotify.com one.';
+    var m = s.match(/open\.spotify\.com\/(?:intl-[a-z]+\/)?(album|playlist|artist|show|user|collection)\b/i) || s.match(/spotify:(album|playlist|artist|show|user)\b/i);
+    if(m) return 'That\u2019s ' + (/^[aeiou]/i.test(m[1]) ? 'an ' : 'a ') + m[1].toLowerCase() + ' link. Cue needs a single song or podcast episode. Open the song, then choose Share, Copy song link.';
+    if(/youtu\.?be|music\.apple|apple\.com|soundcloud|tidal\.com|deezer|amazon\.[a-z.]+\/music|bandcamp/i.test(s)) return 'That isn\u2019t a Spotify link. For now Cue works with Spotify songs.';
+    if(/open\.spotify\.com\/(?:embed\/)?(?:intl-[a-z]+\/)?(track|episode)\//i.test(s) || /spotify:(track|episode):/i.test(s)) return 'That song link looks cut off. Copy it again from Spotify (Share, Copy song link).';
+    if(/^https?:\/\//i.test(s) || /\.[a-z]{2,}\//i.test(s)) return 'That link isn\u2019t a Spotify song. It should start with open.spotify.com/track/.';
+    return 'That doesn\u2019t look like a Spotify song link. In Spotify, choose Share, then Copy song link.';
+  }
+  function flag(id, msg){
+    $('err').textContent = msg;
+    ['src','time'].forEach(function(x){ $(x).removeAttribute('aria-invalid'); });
+    if(id){ $(id).setAttribute('aria-invalid','true'); $(id).focus(); }
   }
 
   var track = params.get('track');
@@ -232,6 +255,7 @@ details[open] summary{margin-bottom:12px}
   function showMaker(){
     $('make').hidden = false;
     ping('maker-open');
+    if(params.get('track')){ $('err').textContent = 'That shared link looks cut off, so the song couldn\u2019t load. Paste the song link here to make a new one.'; ping('broken-link'); }
     $('example').addEventListener('click', function(){ ping('example'); });
     /* Arriving from a shared page's "Send this song from your own moment" button: the song is already filled in. */
     var from = params.get('from');
@@ -250,6 +274,7 @@ details[open] summary{margin-bottom:12px}
         return {id:id, type:q.get('type') === 'episode' ? 'episode' : 'track', t:parseTime(q.get('t')), n:(q.get('n') || '').slice(0,140), by:q.get('by') === 'unisonarity'};
       }catch(e){ return null; }
     }
+    ['src','time'].forEach(function(x){ $(x).addEventListener('input', function(){ this.removeAttribute('aria-invalid'); $('err').textContent = ''; }); });
     $('src').addEventListener('input', function(){
       var c = fromCueLink(this.value);
       if(!c) return;
@@ -261,11 +286,11 @@ details[open] summary{margin-bottom:12px}
       $('time').focus();
     });
     $('form').addEventListener('submit', function(e){
-      e.preventDefault(); $('err').textContent='';
+      e.preventDefault(); flag(null, '');
       var sp = parseSpotify($('src').value);
       var t = parseTime($('time').value);
-      if(!sp){ $('err').textContent='That doesn’t look like a Spotify link. In Spotify, choose Share, then Copy song link.'; return; }
-      if(t===null){ $('err').textContent='Enter a time like 1:30, 90, or 1m30s.'; return; }
+      if(!sp){ flag('src', diagnose($('src').value)); return; }
+      if(t===null){ flag('time', $('time').value.trim() ? 'That time doesn\u2019t look right. Try 1:30, 90, or 1m30s.' : 'Enter a start time like 1:30, 90, or 1m30s.'); return; }
       var nt = $('noteIn').value.trim().slice(0,140);
       var extra = (nt ? '&n=' + encodeURIComponent(nt) : '') + ($('byIn').checked ? '&by=unisonarity' : '');
       var base = (location.protocol==='file:') ? location.href.split('?')[0] : location.origin + location.pathname;
@@ -294,7 +319,7 @@ details[open] summary{margin-bottom:12px}
     $('try').onclick = function(){ ping('check-link'); };
     $('editLink').onclick = function(e){
       e.preventDefault(); ping('edit-link');
-      $('done').hidden = true; $('make').hidden = false; $('err').textContent = '';
+      $('done').hidden = true; $('make').hidden = false; flag(null, '');
       $('time').focus();
     };
     if(navigator.share){
