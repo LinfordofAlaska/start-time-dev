@@ -71,7 +71,10 @@ details[open] summary{margin-bottom:12px}
 .copyrow input{font-family:var(--mono);font-size:.8rem}
 .small{font-size:.9rem;color:var(--muted)}
 
-.player{display:flex;flex-direction:column;gap:14px}
+.player{display:flex;flex-direction:column;gap:12px}
+.player #go.ghost{padding:10px 14px;font-size:.92rem}
+.player #makeOwn{padding:11px 14px;font-size:.92rem}
+.player #byline{font-size:.84rem}
 .when{font-family:var(--mono);color:var(--cue)}
 .noteout{font-family:var(--display);font-size:1.15rem;line-height:1.3;text-wrap:balance}
 .embedwrap{min-height:152px;border-radius:12px;overflow:hidden}
@@ -139,7 +142,7 @@ details[open] summary{margin-bottom:12px}
       <a class="btn ghost" id="shX" href="#" target="_blank" rel="noopener">X</a>
       <a class="btn ghost" id="shFb" href="#" target="_blank" rel="noopener">Facebook</a>
     </div>
-    <p class="small"><a id="try" href="#">Open it to check</a> &middot; <a href="./">Make another</a></p>
+    <p class="small"><a id="editLink" href="#">Edit this link</a> &middot; <a id="try" href="#">Open it to check</a> &middot; <a href="./">Make another</a></p>
   </main>
 
   <!-- PLAYER -->
@@ -155,12 +158,13 @@ details[open] summary{margin-bottom:12px}
     <div class="signedout" id="signedout">
       <p>Full song if you're signed in to Spotify in this browser, otherwise a short preview. <a id="open" href="#" target="_blank" rel="noopener">Open in Spotify</a></p>
     </div>
-    <p class="small" id="byline" hidden>From <a href="https://www.linkedin.com/pulse/unisonarity-benjamin-linford-cfa-az4yc/" target="_blank" rel="noopener">Unisonarity</a>, by <a href="https://open.spotify.com/artist/6ddQgZhBS2xsynMqQTm87V" target="_blank" rel="noopener">Ben Linford</a>. More on <a href="https://open.spotify.com/playlist/6a1oImkmuQMOuLcPSnE5Co" target="_blank" rel="noopener">Spotify</a> and <a href="https://suno.com/playlist/faa0098b-5872-4598-9124-b0180282cb1b" target="_blank" rel="noopener">Suno</a>.</p>
+    <a class="btn ghost" id="makeOwn" href="./">Send this song from your own moment</a>
+    <p class="small" id="byline" hidden>From <a href="https://www.linkedin.com/pulse/unisonarity-benjamin-linford-cfa-az4yc/" target="_blank" rel="noopener">Unisonarity</a>, by <a href="https://open.spotify.com/artist/6ddQgZhBS2xsynMqQTm87V" target="_blank" rel="noopener">Ben Linford</a> &middot; <a href="https://open.spotify.com/playlist/6a1oImkmuQMOuLcPSnE5Co" target="_blank" rel="noopener">Spotify</a> &middot; <a href="https://suno.com/playlist/faa0098b-5872-4598-9124-b0180282cb1b" target="_blank" rel="noopener">Suno</a></p>
   </main>
 
   <footer class="foot">
     <p id="footMake">Made by <a href="https://www.linkedin.com/pulse/unisonarity-benjamin-linford-cfa-az4yc/" target="_blank" rel="noopener">Unisonarity</a>. Hear the songs on <a href="https://open.spotify.com/playlist/6a1oImkmuQMOuLcPSnE5Co" target="_blank" rel="noopener">Spotify</a> or <a href="https://suno.com/playlist/faa0098b-5872-4598-9124-b0180282cb1b" target="_blank" rel="noopener">Suno</a>. Not affiliated with Spotify. No cookies, no personal data.</p>
-    <p id="footPlay" hidden>Made with <a href="./">Cue</a>. <a id="makeOwn" href="./">Make your own link</a>. Not affiliated with Spotify. No cookies.</p>
+    <p id="footPlay" hidden>Made with <a href="./">Cue</a>. Not affiliated with Spotify. No cookies.</p>
   </footer>
 
 </div>
@@ -229,6 +233,33 @@ details[open] summary{margin-bottom:12px}
     $('make').hidden = false;
     ping('maker-open');
     $('example').addEventListener('click', function(){ ping('example'); });
+    /* Arriving from a shared page's "Send this song from your own moment" button: the song is already filled in. */
+    var from = params.get('from');
+    if(from && /^[A-Za-z0-9]{22}$/.test(from)){
+      $('src').value = 'https://open.spotify.com/' + (params.get('type') === 'episode' ? 'episode' : 'track') + '/' + from;
+      $('time').focus();
+      ping('prefill');
+    }
+    /* Paste a Cue link you made earlier and its song, time, note and credit load back in for editing. */
+    function fromCueLink(s){
+      s = String(s||'').trim();
+      if(s.indexOf('track=') < 0) return null;
+      try{
+        var q = new URL(s, location.href).searchParams, id = q.get('track');
+        if(!id || !/^[A-Za-z0-9]{22}$/.test(id)) return null;
+        return {id:id, type:q.get('type') === 'episode' ? 'episode' : 'track', t:parseTime(q.get('t')), n:(q.get('n') || '').slice(0,140), by:q.get('by') === 'unisonarity'};
+      }catch(e){ return null; }
+    }
+    $('src').addEventListener('input', function(){
+      var c = fromCueLink(this.value);
+      if(!c) return;
+      this.value = 'https://open.spotify.com/' + c.type + '/' + c.id;
+      if(c.t !== null) $('time').value = fmt(c.t);
+      $('noteIn').value = c.n; $('byIn').checked = c.by;
+      if(c.n) $('noteIn').closest('details').open = true;
+      ping('edit-pasted');
+      $('time').focus();
+    });
     $('form').addEventListener('submit', function(e){
       e.preventDefault(); $('err').textContent='';
       var sp = parseSpotify($('src').value);
@@ -258,17 +289,22 @@ details[open] summary{margin-bottom:12px}
     $('shX').href = 'https://twitter.com/intent/tweet?text=' + enc(msg) + '&url=' + enc(u('x'));
     $('shFb').href = 'https://www.facebook.com/sharer/sharer.php?u=' + enc(u('facebook'));
     [['shText','sms'],['shMail','email'],['shWa','whatsapp'],['shX','x'],['shFb','facebook']].forEach(function(p){
-      $(p[0]).addEventListener('click', function(){ ping('share', p[1]); });
+      $(p[0]).onclick = function(){ ping('share', p[1]); };
     });
-    $('try').addEventListener('click', function(){ ping('check-link'); });
+    $('try').onclick = function(){ ping('check-link'); };
+    $('editLink').onclick = function(e){
+      e.preventDefault(); ping('edit-link');
+      $('done').hidden = true; $('make').hidden = false; $('err').textContent = '';
+      $('time').focus();
+    };
     if(navigator.share){
       var b = $('nativeShare'); b.hidden = false;
-      b.addEventListener('click', function(){
+      b.onclick = function(){
         ping('share', 'native');
         navigator.share({title:'Cue', text:msg, url:u('share')}).catch(function(){});
-      });
+      };
     }
-    $('copy').addEventListener('click', function(){
+    $('copy').onclick = function(){
       var btn=this, link=$('link');
       function done(){ btn.textContent='Copied'; setTimeout(function(){btn.textContent='Copy'},1500); }
       ping('share', 'copy');
@@ -276,13 +312,14 @@ details[open] summary{margin-bottom:12px}
       if(navigator.clipboard && navigator.clipboard.writeText){
         navigator.clipboard.writeText(copyUrl).then(done, function(){ try{ document.execCommand('copy'); done(); }catch(e){} });
       } else { try{ document.execCommand('copy'); done(); }catch(e){} }
-    });
+    };
   }
 
   function showPlayer(type, id, startSec){
     document.body.classList.add('isplay');
     ping('view', (params.get('s') || 'direct').replace(/[^a-z]/g,'').slice(0,12) || 'direct');
     $('open').addEventListener('click', function(){ ping('open-spotify'); });
+    $('makeOwn').href = './?from=' + id + (type === 'episode' ? '&type=episode' : '');
     $('makeOwn').addEventListener('click', function(){ ping('make-own'); });
     $('play').hidden = false; $('footMake').hidden = true; $('footPlay').hidden = false;
     document.title = 'Cue: starts at ' + fmt(startSec);
