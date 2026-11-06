@@ -81,6 +81,7 @@ details[open] summary{margin-bottom:12px}
 .player #byline{font-size:.84rem}
 .when{font-family:var(--mono);color:var(--cue)}
 .noteout{font-family:var(--display);font-weight:600;font-size:clamp(1.35rem,5.6vw,1.75rem);line-height:1.2;text-wrap:balance;color:var(--text);position:relative;padding-left:20px;margin:2px 0}
+.noteout.long{font-size:clamp(1.15rem,4.9vw,1.5rem)}
 .noteout::before{content:"\201C";position:absolute;left:-2px;top:-12px;font-size:2.6rem;line-height:1;color:var(--cue)}
 .player.hasnote h1{font-family:var(--mono);font-weight:500;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);line-height:1.2}
 .player.hasnote .when{font-size:.8rem;letter-spacing:.14em}
@@ -126,7 +127,7 @@ details[open] summary{margin-bottom:12px}
       <p class="err" id="err" role="alert"></p>
       <button type="submit">Make link</button>
     </form>
-    <p class="small">Try one: <a id="example" href="./?track=3iU0ePwZpWafktyzSruGoa&t=89&n=My%20son%20told%20me%20at%20three%20the%20sun%20goes%20round%20the%20earth.%20Wrong%2C%20but%20kind%20of%20right.%20The%20bridge%20is%20my%20answer%3A%20rise%2C%20son.&by=unisonarity">&ldquo;You Didn't Know&rdquo; from the bridge</a>.</p>
+    <p class="small">Try one: <a id="example" href="./?track=3iU0ePwZpWafktyzSruGoa&t=89&n=My%20son%20was%2016%20and%20having%20a%20hard%20time.%20I%20wrote%20him%20this%20bridge%3A%20rise%20again%2C%20the%20world%20is%20on%20your%20side.%20Years%20later%2C%20it%20found%20its%20song.&by=unisonarity">&ldquo;You Didn't Know&rdquo; from the bridge</a>.</p>
   </main>
 
   <!-- STEP 2: share -->
@@ -350,7 +351,7 @@ details[open] summary{margin-bottom:12px}
     $('makeOwn').addEventListener('click', function(){ ping('make-own'); });
     $('play').hidden = false; $('footMake').hidden = true; $('footPlay').hidden = false;
     document.title = 'Cue: starts at ' + fmt(startSec);
-    if(noteText){ var no = $('noteOut'); no.textContent = noteText; no.hidden = false; $('play').classList.add('hasnote'); }
+    if(noteText){ var no = $('noteOut'); no.textContent = noteText; no.hidden = false; if(noteText.length > 90) no.classList.add('long'); $('play').classList.add('hasnote'); }
     if(params.get('by') === 'unisonarity'){ $('byline').hidden = false; }
     $('whenLabel').textContent = fmt(startSec);
     $('goLabel').textContent = fmt(startSec);
