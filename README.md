@@ -28,6 +28,10 @@ The page is one static HTML file. There is no server and no account.
 | `by` | `unisonarity` shows the Unisonarity credit line |
 | `s` | which share button made the link (`sms`, `email`, `whatsapp`, `x`, `facebook`, `copy`, `share`) |
 
+## Dev site
+
+Changes go to [dev.cue.unisonarity.com](https://dev.cue.unisonarity.com/) first (repo `start-time-dev`, which also carries a `robots.txt` that keeps it out of search). The page shows a small **dev** tag there. When a change is approved, the same `index.html` is pushed to `start-time`, which serves the live site.
+
 ## Privacy
 
 Cue sets no cookies and stores no personal data. If a GoatCounter site code is set in `index.html` (`var GC`), it counts page views and button presses as anonymous events and honors Do Not Track. With the code empty, nothing is sent.

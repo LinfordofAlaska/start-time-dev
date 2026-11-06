@@ -118,6 +118,7 @@ details[open] summary{margin-bottom:12px}
       <p class="err" id="err" role="alert"></p>
       <button type="submit">Make link</button>
     </form>
+    <p class="small">Try one: <a id="example" href="./?track=3iU0ePwZpWafktyzSruGoa&t=90&n=Sun%2C%20son.&by=unisonarity">&ldquo;You Didn't Know&rdquo; from 1:30</a>.</p>
   </main>
 
   <!-- STEP 2: share -->
@@ -158,7 +159,7 @@ details[open] summary{margin-bottom:12px}
   </main>
 
   <footer class="foot">
-    <p id="footMake">Made by <a href="https://www.linkedin.com/pulse/unisonarity-benjamin-linford-cfa-az4yc/" target="_blank" rel="noopener">Unisonarity</a>. Hear the songs on <a href="https://open.spotify.com/playlist/6a1oImkmuQMOuLcPSnE5Co" target="_blank" rel="noopener">Spotify</a> or <a href="https://suno.com/playlist/faa0098b-5872-4598-9124-b0180282cb1b" target="_blank" rel="noopener">Suno</a>. Not affiliated with Spotify. Signed-in listeners hear the full song, others a short preview. Cue counts visits and button use, with no cookies and no personal data.</p>
+    <p id="footMake">Made by <a href="https://www.linkedin.com/pulse/unisonarity-benjamin-linford-cfa-az4yc/" target="_blank" rel="noopener">Unisonarity</a>. Hear the songs on <a href="https://open.spotify.com/playlist/6a1oImkmuQMOuLcPSnE5Co" target="_blank" rel="noopener">Spotify</a> or <a href="https://suno.com/playlist/faa0098b-5872-4598-9124-b0180282cb1b" target="_blank" rel="noopener">Suno</a>. Not affiliated with Spotify. No cookies, no personal data.</p>
     <p id="footPlay" hidden>Made with <a href="./">Cue</a>. <a id="makeOwn" href="./">Make your own link</a>. Not affiliated with Spotify. No cookies.</p>
   </footer>
 
@@ -227,6 +228,7 @@ details[open] summary{margin-bottom:12px}
   function showMaker(){
     $('make').hidden = false;
     ping('maker-open');
+    $('example').addEventListener('click', function(){ ping('example'); });
     $('form').addEventListener('submit', function(e){
       e.preventDefault(); $('err').textContent='';
       var sp = parseSpotify($('src').value);
