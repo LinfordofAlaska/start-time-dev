@@ -375,7 +375,7 @@ details[open] summary{margin-bottom:12px}
     $('openBig').addEventListener('click', function(){ ping('open-spotify'); });
     $('skipLabel').textContent = fmt(startSec);
     var uri = 'spotify:' + type + ':' + id;
-    var ctrl = null, seeked = false, mode = 'unknown';
+    var ctrl = null, lastSeek = 0, mode = 'unknown';
 
     /* loadEntity is Spotify's current call; loadUri is the older one. startAt is in seconds. */
     function load(startAt){
@@ -406,16 +406,22 @@ details[open] summary{margin-bottom:12px}
             if(d.duration <= 31000){ enterPreview(d); return; }
             mode = 'full'; ping('heard-full');
           }
-          /* Full song: if playback began near 0, move it to the start time once. */
-          if(mode === 'full' && !seeked && !d.isPaused && d.position < 3000 && startSec > 0){ seeked = true; c.seek(startSec); }
+          /* Full song: whenever playback starts well before the cue (the embed's own play button, a replay
+             after the song ends), move it to the start time. */
+          if(mode === 'full' && startSec > 3){
+            var now = Date.now();
+            if(!d.isPaused && d.position < (startSec - 3) * 1000 && now - lastSeek > 2500){ lastSeek = now; c.seek(startSec); }
+          }
         });
+        /* Park the embed at the cue so its own play button starts there too. */
+        c.addListener('ready', function(){ if(startSec > 3 && mode === 'unknown') load(startSec); });
       });
     };
     $('go').addEventListener('click', function(){
       if(!ctrl) return;
       ping('play-press');
       if(mode === 'preview'){ ctrl.seek(0); ctrl.play(); return; }
-      seeked = false;
+      lastSeek = Date.now();
       load(startSec); ctrl.play();
     });
     var s = document.createElement('script');
