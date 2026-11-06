@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Cue makes a link that starts a Spotify song at the moment you choose.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Cue: listen from the good part">
+<meta property="og:description" content="Open this link to hear the song from the moment someone picked for you.">
+<meta property="og:image" content="https://cue.unisonarity.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0b0806">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b0806'/%3E%3Crect x='12' y='27' width='5' height='10' rx='2.5' fill='%23da912e'/%3E%3Crect x='21' y='20' width='5' height='24' rx='2.5' fill='%23da912e'/%3E%3Crect x='38' y='17' width='5' height='30' rx='2.5' fill='%235d768c'/%3E%3Crect x='47' y='24' width='5' height='16' rx='2.5' fill='%235d768c'/%3E%3Crect x='30' y='10' width='4' height='44' rx='2' fill='%23f5dcac'/%3E%3C/svg%3E">
+<title>Cue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,500;6..96,600;6..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow column that fills one screen. Two states on the maker (form, then share) and one for the player. Dark, with an amber cue marker. */
+/* Unisonarity palette, sampled from the album cover and the U mark: warm black, cream title,
+   amber/copper on one side, steel blue on the other. Display face echoes the covers' Bodoni titles. */
+:root{
+  --ink:#0b0806; --panel:#16110c; --line:#2d251d; --text:#f5dcac; --muted:#bfae8f; --dim:#80735f;
+  --cue:#da912e; --cue-ink:#160d03; --copper:#a77b55; --steel:#5d768c; --steel-dim:#3a4a58; --warn:#e3a06a;
+  --display:"Bodoni Moda", "Bodoni 72", Didot, Georgia, "Times New Roman", serif;
+  --body:"Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+/* The covers split warm amber against steel blue. The page carries that as two soft glows on the warm black. */
+body{margin:0;background:radial-gradient(70% 55% at 0% 0%, rgba(218,145,46,.17), transparent 72%), radial-gradient(70% 55% at 100% 100%, rgba(93,118,140,.22), transparent 72%), var(--ink);color:var(--text);font-family:var(--body);font-size:16px;line-height:1.5;
+  padding-block:16px;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:20px;min-height:calc(100svh - 32px)}
+a{color:var(--cue);text-underline-offset:3px}
+a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--cue);outline-offset:3px}
+p{margin:0}
+h1{font-family:var(--display);font-weight:600;margin:0;text-wrap:balance;font-size:clamp(1.8rem,7vw,2.5rem);line-height:1.07;letter-spacing:-.01em}
+
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:16px}
+.mark{font-family:var(--display);font-weight:600;font-size:1.45rem;color:var(--text);text-decoration:none}
+.mark i{font-style:normal;color:var(--cue)}
+.devtag{font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;vertical-align:middle;margin-left:6px;padding:2px 6px;border-radius:4px;background:var(--steel-dim);color:var(--text)}
+.by{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.1em}.by a{color:var(--text);text-decoration-color:var(--steel)}
+
+.lede{color:var(--muted);font-size:1.02rem}
+.stack{display:flex;flex-direction:column;gap:14px}
+label.l{display:block;font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+input[type=text]{width:100%;font:inherit;font-size:1rem;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px 14px;min-width:0}
+input[type=text]::placeholder{color:var(--dim)}
+button,.btn{font:inherit;font-weight:600;border:0;border-radius:10px;padding:14px 18px;cursor:pointer;background:linear-gradient(180deg,#e8a23a,#cf8524);color:var(--cue-ink);text-align:center;text-decoration:none;display:inline-block;box-shadow:0 6px 18px rgba(218,145,46,.22)}
+button:hover,.btn:hover{filter:brightness(1.06)}
+.ghost,.ghost:hover{box-shadow:none}
+input[type=text]:focus{border-color:var(--cue);outline:none;box-shadow:0 0 0 3px rgba(218,145,46,.18)}
+.cueline{position:relative;height:2px;border-radius:1px;margin:2px 0 4px;background:linear-gradient(90deg,var(--copper) 0 36%,var(--steel) 36% 100%)}
+.cueline span{position:absolute;left:36%;top:-5px;width:3px;height:12px;border-radius:2px;background:var(--cue);transform:translateX(-50%);box-shadow:0 0 10px rgba(218,145,46,.6)}
+.ghost{background:transparent;color:var(--text);border:1px solid var(--steel-dim)}
+.ghost:hover{border-color:var(--steel);filter:none}
+.err{color:var(--warn);font-size:.92rem;min-height:1.2em}
+details summary{cursor:pointer;color:var(--muted);font-size:.92rem;padding:2px 0}
+details[open] summary{margin-bottom:12px}
+.opt{display:flex;gap:10px;align-items:center;font-size:.92rem;color:var(--muted)}
+.opt input{width:auto;accent-color:var(--cue)}
+
+.share{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.share .btn{padding:12px 8px;font-size:.95rem}
+@media (max-width:360px){.share{grid-template-columns:repeat(2,1fr)}}
+.copyrow{display:flex;gap:8px}
+.copyrow input{font-family:var(--mono);font-size:.8rem}
+.small{font-size:.9rem;color:var(--muted)}
+
+.player{display:flex;flex-direction:column;gap:14px}
+.when{font-family:var(--mono);color:var(--cue)}
+.noteout{font-family:var(--display);font-size:1.15rem;line-height:1.3;text-wrap:balance}
+.embedwrap{min-height:152px;border-radius:12px;overflow:hidden}
+.embedwrap iframe{display:block;width:100%}
+.signedout{border-left:2px solid var(--steel);padding:0 0 0 14px;color:var(--muted);font-size:.85rem}
+.previewui{display:flex;flex-direction:column;gap:8px}
+.previewui .small{border-left:2px solid var(--cue);padding-left:14px}
+
+.foot{margin-top:auto;border-top:1px solid var(--line);padding-top:12px;color:var(--dim);font-size:.8rem}
+.foot a{color:var(--muted)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <a class="mark" href="./" aria-label="Cue home">Cue<i>.</i> <span class="devtag" id="devtag" hidden>dev</span></a>
+    <span class="by">by <a href="https://www.linkedin.com/pulse/unisonarity-benjamin-linford-cfa-az4yc/" target="_blank" rel="noopener">Unisonarity</a></span>
+  </header>
+
+  <!-- STEP 1: make -->
+  <main id="make" class="stack" style="gap:15px" hidden>
+    <h1>Send the song from the good part.</h1>
+    <p class="lede">Paste a Spotify link, choose a time, and share. They hear it from there.</p>
+    <div class="cueline" aria-hidden="true"><span></span></div>
+
+    <form id="form" class="stack" autocomplete="off">
+      <div>
+        <label class="l" for="src">Spotify song link</label>
+        <input id="src" type="text" placeholder="https://open.spotify.com/track/..." inputmode="url" autocapitalize="off" autocorrect="off">
+      </div>
+      <div>
+        <label class="l" for="time">Start at</label>
+        <input id="time" type="text" placeholder="1:30" inputmode="text" autocapitalize="off">
+      </div>
+      <details>
+        <summary>Add a note</summary>
+        <div class="stack">
+          <input id="noteIn" type="text" maxlength="140" placeholder="Wait for the bridge. Thank me later." aria-label="Note">
+          <label class="opt"><input id="byIn" type="checkbox"> Credit Unisonarity on this link</label>
+        </div>
+      </details>
+      <p class="err" id="err" role="alert"></p>
+      <button type="submit">Make link</button>
+    </form>
+  </main>
+
+  <!-- STEP 2: share -->
+  <main id="done" class="stack" style="gap:16px" hidden>
+    <h1>Ready. Send it.</h1>
+    <div>
+      <label class="l" for="link">Your link</label>
+      <div class="copyrow">
+        <input id="link" type="text" readonly>
+        <button type="button" id="copy">Copy</button>
+      </div>
+    </div>
+    <div class="share" id="shareGrid">
+      <button type="button" id="nativeShare" hidden>Share</button>
+      <a class="btn ghost" id="shText" href="#">Text</a>
+      <a class="btn ghost" id="shMail" href="#">Email</a>
+      <a class="btn ghost" id="shWa" href="#" target="_blank" rel="noopener">WhatsApp</a>
+      <a class="btn ghost" id="shX" href="#" target="_blank" rel="noopener">X</a>
+      <a class="btn ghost" id="shFb" href="#" target="_blank" rel="noopener">Facebook</a>
+    </div>
+    <p class="small"><a id="try" href="#">Open it to check</a> &middot; <a href="./">Make another</a></p>
+  </main>
+
+  <!-- PLAYER -->
+  <main id="play" class="player" hidden>
+    <h1>Starts at <span class="when" id="whenLabel"></span></h1>
+    <p class="noteout" id="noteOut" hidden></p>
+    <div class="embedwrap"><div id="embed"></div></div>
+    <div class="previewui" id="previewui" hidden>
+      <a class="btn" id="openBig" href="#" target="_blank" rel="noopener">Open in Spotify, then skip to <span id="skipLabel"></span></a>
+      <p class="small" id="previewNote"></p>
+    </div>
+    <button type="button" id="go">Play from <span id="goLabel"></span></button>
+    <div class="signedout" id="signedout">
+      <p>Full song if you're signed in to Spotify in this browser, otherwise a short preview. <a id="open" href="#" target="_blank" rel="noopener">Open in Spotify</a></p>
+    </div>
+    <p class="small" id="byline" hidden>From <a href="https://www.linkedin.com/pulse/unisonarity-benjamin-linford-cfa-az4yc/" target="_blank" rel="noopener">Unisonarity</a>, by <a href="https://open.spotify.com/artist/6ddQgZhBS2xsynMqQTm87V" target="_blank" rel="noopener">Ben Linford</a>. More on <a href="https://open.spotify.com/playlist/6a1oImkmuQMOuLcPSnE5Co" target="_blank" rel="noopener">Spotify</a> and <a href="https://suno.com/playlist/faa0098b-5872-4598-9124-b0180282cb1b" target="_blank" rel="noopener">Suno</a>.</p>
+  </main>
+
+  <footer class="foot">
+    <p id="footMake">Made by <a href="https://www.linkedin.com/pulse/unisonarity-benjamin-linford-cfa-az4yc/" target="_blank" rel="noopener">Unisonarity</a>. Hear the songs on <a href="https://open.spotify.com/playlist/6a1oImkmuQMOuLcPSnE5Co" target="_blank" rel="noopener">Spotify</a> or <a href="https://suno.com/playlist/faa0098b-5872-4598-9124-b0180282cb1b" target="_blank" rel="noopener">Suno</a>. Not affiliated with Spotify. Signed-in listeners hear the full song, others a short preview. Cue counts visits and button use, with no cookies and no personal data.</p>
+    <p id="footPlay" hidden>Made with <a href="./">Cue</a>. <a id="makeOwn" href="./">Make your own link</a>. Not affiliated with Spotify. No cookies.</p>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  var params = new URLSearchParams(location.search);
+  var $ = function(id){ return document.getElementById(id); };
+
+  /* Dev site: same file, different host. Mark it so nobody mistakes it for the live one. */
+  var isDev = /^dev\./.test(location.hostname) || /^localhost$|^127\./.test(location.hostname);
+  if(isDev){ $('devtag').hidden = false; document.title = '[dev] ' + document.title; }
+
+  /* Analytics: counts visits and button use only. No cookies, no personal data, no IPs stored by us.
+     GoatCounter site code goes here (for example 'cue'). Leave it empty and nothing is sent. */
+  var GC = '';
+  var queue = [];
+  function ping(name, label){
+    if(!GC) return;
+    var o = {path:'e/' + name + (label ? '/' + label : ''), title:name + (label ? ': ' + label : ''), event:true};
+    if(window.goatcounter && window.goatcounter.count){ window.goatcounter.count(o); } else { queue.push(o); }
+  }
+  function initAnalytics(){
+    if(!GC || navigator.doNotTrack === '1'){ GC = ''; return; }
+    var s = document.createElement('script');
+    s.async = true; s.src = 'https://gc.zgo.at/count.js';
+    s.setAttribute('data-goatcounter', 'https://' + GC + '.goatcounter.com/count');
+    s.onload = function(){ queue.splice(0).forEach(function(o){ window.goatcounter.count(o); }); };
+    document.head.appendChild(s);
+  }
+  initAnalytics();
+
+  function parseTime(s){
+    s = String(s||'').trim().toLowerCase();
+    if(!s) return null;
+    if(/^\d+$/.test(s)) return parseInt(s,10);
+    var m = s.match(/^(?:(\d+):)?(\d{1,2}):(\d{1,2})$/);
+    if(m) return (parseInt(m[1]||0,10)*3600)+(parseInt(m[2],10)*60)+parseInt(m[3],10);
+    m = s.match(/^(?:(\d+)h)?\s*(?:(\d+)m)?\s*(?:(\d+)s)?$/);
+    if(m && (m[1]||m[2]||m[3])) return (parseInt(m[1]||0,10)*3600)+(parseInt(m[2]||0,10)*60)+parseInt(m[3]||0,10);
+    return null;
+  }
+  function fmt(sec){
+    var h=Math.floor(sec/3600), m=Math.floor(sec%3600/60), s=sec%60;
+    var p=function(n){return n<10?'0'+n:''+n};
+    return h? h+':'+p(m)+':'+p(s) : m+':'+p(s);
+  }
+  function parseSpotify(s){
+    s = String(s||'').trim();
+    var m = s.match(/spotify:(track|episode):([A-Za-z0-9]{22})/) ||
+            s.match(/open\.spotify\.com\/(?:intl-[a-z]+\/)?(track|episode)\/([A-Za-z0-9]{22})/);
+    if(m) return {type:m[1], id:m[2]};
+    if(/^[A-Za-z0-9]{22}$/.test(s)) return {type:'track', id:s};
+    return null;
+  }
+
+  var track = params.get('track');
+  var type = params.get('type') === 'episode' ? 'episode' : 'track';
+  var start = parseTime(params.get('t'));
+  var noteText = (params.get('n') || '').slice(0, 140);
+
+  if(track && /^[A-Za-z0-9]{22}$/.test(track)){ showPlayer(type, track, start||0); }
+  else { showMaker(); }
+
+  function showMaker(){
+    $('make').hidden = false;
+    ping('maker-open');
+    $('form').addEventListener('submit', function(e){
+      e.preventDefault(); $('err').textContent='';
+      var sp = parseSpotify($('src').value);
+      var t = parseTime($('time').value);
+      if(!sp){ $('err').textContent='That doesn’t look like a Spotify link. In Spotify, choose Share, then Copy song link.'; return; }
+      if(t===null){ $('err').textContent='Enter a time like 1:30, 90, or 1m30s.'; return; }
+      var nt = $('noteIn').value.trim().slice(0,140);
+      var extra = (nt ? '&n=' + encodeURIComponent(nt) : '') + ($('byIn').checked ? '&by=unisonarity' : '');
+      var base = (location.protocol==='file:') ? location.href.split('?')[0] : location.origin + location.pathname;
+      var url = base + '?track=' + sp.id + (sp.type==='episode'?'&type=episode':'') + '&t=' + t + extra;
+      ping('make-link', sp.type);
+      showShare(url, t, nt);
+    });
+  }
+
+  function showShare(url, t, note){
+    $('make').hidden = true; $('done').hidden = false;
+    /* Each channel gets its own &s= tag so a shared link shows where it was sent from. */
+    var u = function(ch){ return url + '&s=' + ch; };
+    var copyUrl = u('copy');
+    $('link').value = copyUrl; $('try').href = url;
+    var enc = encodeURIComponent;
+    var msg = 'Listen from ' + fmt(t) + (note ? ' (' + note + ')' : '') + '.';
+    $('shText').href = 'sms:?&body=' + enc(msg + ' ' + u('sms'));
+    $('shMail').href = 'mailto:?subject=' + enc('A song, from the good part') + '&body=' + enc(msg + '\n\n' + u('email'));
+    $('shWa').href = 'https://wa.me/?text=' + enc(msg + ' ' + u('whatsapp'));
+    $('shX').href = 'https://twitter.com/intent/tweet?text=' + enc(msg) + '&url=' + enc(u('x'));
+    $('shFb').href = 'https://www.facebook.com/sharer/sharer.php?u=' + enc(u('facebook'));
+    [['shText','sms'],['shMail','email'],['shWa','whatsapp'],['shX','x'],['shFb','facebook']].forEach(function(p){
+      $(p[0]).addEventListener('click', function(){ ping('share', p[1]); });
+    });
+    $('try').addEventListener('click', function(){ ping('check-link'); });
+    if(navigator.share){
+      var b = $('nativeShare'); b.hidden = false;
+      b.addEventListener('click', function(){
+        ping('share', 'native');
+        navigator.share({title:'Cue', text:msg, url:u('share')}).catch(function(){});
+      });
+    }
+    $('copy').addEventListener('click', function(){
+      var btn=this, link=$('link');
+      function done(){ btn.textContent='Copied'; setTimeout(function(){btn.textContent='Copy'},1500); }
+      ping('share', 'copy');
+      link.select();
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(copyUrl).then(done, function(){ try{ document.execCommand('copy'); done(); }catch(e){} });
+      } else { try{ document.execCommand('copy'); done(); }catch(e){} }
+    });
+  }
+
+  function showPlayer(type, id, startSec){
+    document.body.classList.add('isplay');
+    ping('view', (params.get('s') || 'direct').replace(/[^a-z]/g,'').slice(0,12) || 'direct');
+    $('open').addEventListener('click', function(){ ping('open-spotify'); });
+    $('makeOwn').addEventListener('click', function(){ ping('make-own'); });
+    $('play').hidden = false; $('footMake').hidden = true; $('footPlay').hidden = false;
+    document.title = 'Cue: starts at ' + fmt(startSec);
+    if(noteText){ var no = $('noteOut'); no.textContent = noteText; no.hidden = false; }
+    if(params.get('by') === 'unisonarity'){ $('byline').hidden = false; }
+    $('whenLabel').textContent = fmt(startSec);
+    $('goLabel').textContent = fmt(startSec);
+    $('open').href = 'https://open.spotify.com/' + type + '/' + id;
+    $('openBig').href = $('open').href;
+    $('openBig').addEventListener('click', function(){ ping('open-spotify'); });
+    $('skipLabel').textContent = fmt(startSec);
+    var uri = 'spotify:' + type + ':' + id;
+    var ctrl = null, seeked = false, mode = 'unknown';
+
+    /* loadEntity is Spotify's current call; loadUri is the older one. startAt is in seconds. */
+    function load(startAt){
+      if(ctrl.loadEntity){ startAt ? ctrl.loadEntity(uri, false, startAt) : ctrl.loadEntity(uri); }
+      else { startAt ? ctrl.loadUri(uri, false, startAt) : ctrl.loadUri(uri); }
+    }
+
+    /* Not signed in to Spotify in this browser: the embed only has a short preview, and a start time
+       past its end leaves it parked with nothing playing. So play the preview from the beginning and
+       point the listener to Spotify for the real thing. */
+    function enterPreview(d){
+      mode = 'preview'; ping('heard-preview');
+      var secs = Math.max(1, Math.round(d.duration / 1000));
+      $('previewNote').textContent = 'Not signed in to Spotify in this browser, so only a ' + secs + '-second preview plays here. In Spotify, skip to ' + fmt(startSec) + '.';
+      $('previewui').hidden = false; $('signedout').hidden = true;
+      var g = $('go'); g.textContent = 'Play the preview here'; g.classList.add('ghost');
+      load(0); ctrl.play();
+    }
+
+    window.onSpotifyIframeApiReady = function(api){
+      api.createController($('embed'), {uri:uri, width:'100%', height:152}, function(c){
+        ctrl = c;
+        var fr = document.querySelector('.embedwrap iframe');
+        if(fr){ fr.setAttribute('loading','eager'); }
+        c.addListener('playback_update', function(e){
+          var d = e.data || {};
+          if(mode === 'unknown' && d.duration > 0){
+            if(d.duration <= 31000){ enterPreview(d); return; }
+            mode = 'full'; ping('heard-full');
+          }
+          /* Full song: if playback began near 0, move it to the start time once. */
+          if(mode === 'full' && !seeked && !d.isPaused && d.position < 3000 && startSec > 0){ seeked = true; c.seek(startSec); }
+        });
+      });
+    };
+    $('go').addEventListener('click', function(){
+      if(!ctrl) return;
+      ping('play-press');
+      if(mode === 'preview'){ ctrl.seek(0); ctrl.play(); return; }
+      seeked = false;
+      load(startSec); ctrl.play();
+    });
+    var s = document.createElement('script');
+    s.src = 'https://open.spotify.com/embed/iframe-api/v1'; s.async = true;
+    document.body.appendChild(s);
+  }
+})();
+</script>
+</body>
+</html>
