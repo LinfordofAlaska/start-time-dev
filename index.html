@@ -375,7 +375,7 @@ details[open] summary{margin-bottom:12px}
     $('openBig').addEventListener('click', function(){ ping('open-spotify'); });
     $('skipLabel').textContent = fmt(startSec);
     var uri = 'spotify:' + type + ':' + id;
-    var ctrl = null, lastSeek = 0, mode = 'unknown';
+    var ctrl = null, lastSeek = 0, preloaded = false, mode = 'unknown';
 
     /* loadEntity is Spotify's current call; loadUri is the older one. startAt is in seconds. */
     function load(startAt){
@@ -400,6 +400,8 @@ details[open] summary{margin-bottom:12px}
         ctrl = c;
         var fr = document.querySelector('.embedwrap iframe');
         if(fr){ fr.setAttribute('loading','eager'); }
+        /* Park the embed at the cue once, so its own play button starts there. Guarded so a reload can't loop. */
+        c.addListener('ready', function(){ if(!preloaded && startSec > 3){ preloaded = true; load(startSec); } });
         c.addListener('playback_update', function(e){
           var d = e.data || {};
           if(mode === 'unknown' && d.duration > 0){
