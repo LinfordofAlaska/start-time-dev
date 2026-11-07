@@ -271,8 +271,15 @@ details[open] summary{margin-bottom:12px}
   var byU = params.get('by') === 'unisonarity';
   /* Short links (?c=abc123) are stored by a small Cloudflare Worker. Empty = off; links stay self-contained. */
   var API = 'https://hello-world-sweet-poetry-f22a.ben-2ae.workers.dev';
-  function fetchLink(id){
-    return fetch(API + '/links/' + id).then(function(r){ return r.ok ? r.json() : Promise.reject(); });
+  /* Rejects with 'missing' (no such link) or 'net' (couldn't reach the service); retries once on 'net'. */
+  function fetchLink(id, again){
+    return fetch(API + '/links/' + id, {cache:'no-store'}).then(function(r){
+      if(r.status === 404) return Promise.reject('missing');
+      return r.ok ? r.json() : Promise.reject('net');
+    }, function(){ return Promise.reject('net'); }).catch(function(why){
+      if(why === 'net' && !again){ return new Promise(function(ok){ setTimeout(ok, 700); }).then(function(){ return fetchLink(id, true); }); }
+      return Promise.reject(why);
+    });
   }
 
   var cid = params.get('c');
@@ -281,15 +288,16 @@ details[open] summary{margin-bottom:12px}
       track = d.track; type = d.type === 'episode' ? 'episode' : 'track'; start = d.t;
       noteText = String(d.n || '').slice(0, 140); byU = !!d.by;
       if(/^[A-Za-z0-9]{22}$/.test(track)) showPlayer(type, track, start || 0); else showMaker();
-    }).catch(showMaker);
+    }).catch(function(why){ showMaker(why === 'net' ? 'We couldn\u2019t reach the link service just now. Reload to try again.' : ''); });
   }
   else if(track && /^[A-Za-z0-9]{22}$/.test(track)){ showPlayer(type, track, start||0); }
   else { showMaker(); }
 
-  function showMaker(){
+  function showMaker(note){
     $('make').hidden = false;
     ping('maker-open');
-    if(params.get('track') || params.get('c')){ $('err').textContent = 'That shared link looks cut off, so the song couldn\u2019t load. Paste the song link here to make a new one.'; ping('broken-link'); }
+    if(note){ $('err').textContent = note; ping('broken-link', 'net'); }
+    else if(params.get('track') || params.get('c')){ $('err').textContent = 'That shared link looks cut off, so the song couldn\u2019t load. Paste the song link here to make a new one.'; ping('broken-link'); }
     $('example').addEventListener('click', function(){ ping('example'); });
     /* Arriving from a shared page's "Send this song from your own moment" button: the song is already filled in. */
     var from = params.get('from');
