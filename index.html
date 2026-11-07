@@ -184,8 +184,8 @@ details[open] summary{margin-bottom:12px}
   </main>
 
   <footer class="foot">
-    <p id="footMake">Made by <a href="https://www.linkedin.com/pulse/unisonarity-benjamin-linford-cfa-az4yc/" target="_blank" rel="noopener">Unisonarity</a> &middot; <a href="https://open.spotify.com/playlist/6a1oImkmuQMOuLcPSnE5Co" target="_blank" rel="noopener">Spotify</a> &middot; <a href="https://suno.com/playlist/faa0098b-5872-4598-9124-b0180282cb1b" target="_blank" rel="noopener">Suno</a>. Not affiliated with Spotify. No cookies.</p>
-    <p id="footPlay" hidden>Made with <a href="./">Cue</a> &middot; <a href="https://open.spotify.com/playlist/6a1oImkmuQMOuLcPSnE5Co" target="_blank" rel="noopener">Spotify</a> &middot; <a href="https://suno.com/playlist/faa0098b-5872-4598-9124-b0180282cb1b" target="_blank" rel="noopener">Suno</a>. Not affiliated with Spotify. No cookies.</p>
+    <p id="footMake">Made by <a href="https://www.linkedin.com/pulse/unisonarity-benjamin-linford-cfa-az4yc/" target="_blank" rel="noopener">Unisonarity</a> &middot; <a href="https://open.spotify.com/playlist/6a1oImkmuQMOuLcPSnE5Co" target="_blank" rel="noopener">Spotify</a> &middot; <a href="https://suno.com/playlist/faa0098b-5872-4598-9124-b0180282cb1b" target="_blank" rel="noopener">Suno</a>. Not affiliated with Spotify. No cookies; notes are stored only to make short links.</p>
+    <p id="footPlay" hidden>Made with <a href="./">Cue</a> &middot; <a href="https://open.spotify.com/playlist/6a1oImkmuQMOuLcPSnE5Co" target="_blank" rel="noopener">Spotify</a> &middot; <a href="https://suno.com/playlist/faa0098b-5872-4598-9124-b0180282cb1b" target="_blank" rel="noopener">Suno</a>. Not affiliated with Spotify. No cookies; notes are stored only to make short links.</p>
   </footer>
 
 </div>
@@ -268,14 +268,28 @@ details[open] summary{margin-bottom:12px}
   var type = params.get('type') === 'episode' ? 'episode' : 'track';
   var start = parseTime(params.get('t'));
   var noteText = (params.get('n') || '').slice(0, 140);
+  var byU = params.get('by') === 'unisonarity';
+  /* Short links (?c=abc123) are stored by a small Cloudflare Worker. Empty = off; links stay self-contained. */
+  var API = 'https://hello-world-sweet-poetry-f22a.ben-2ae.workers.dev';
+  function fetchLink(id){
+    return fetch(API + '/links/' + id).then(function(r){ return r.ok ? r.json() : Promise.reject(); });
+  }
 
-  if(track && /^[A-Za-z0-9]{22}$/.test(track)){ showPlayer(type, track, start||0); }
+  var cid = params.get('c');
+  if(API && cid && /^[A-Za-z0-9]{4,12}$/.test(cid)){
+    fetchLink(cid).then(function(d){
+      track = d.track; type = d.type === 'episode' ? 'episode' : 'track'; start = d.t;
+      noteText = String(d.n || '').slice(0, 140); byU = !!d.by;
+      if(/^[A-Za-z0-9]{22}$/.test(track)) showPlayer(type, track, start || 0); else showMaker();
+    }).catch(showMaker);
+  }
+  else if(track && /^[A-Za-z0-9]{22}$/.test(track)){ showPlayer(type, track, start||0); }
   else { showMaker(); }
 
   function showMaker(){
     $('make').hidden = false;
     ping('maker-open');
-    if(params.get('track')){ $('err').textContent = 'That shared link looks cut off, so the song couldn\u2019t load. Paste the song link here to make a new one.'; ping('broken-link'); }
+    if(params.get('track') || params.get('c')){ $('err').textContent = 'That shared link looks cut off, so the song couldn\u2019t load. Paste the song link here to make a new one.'; ping('broken-link'); }
     $('example').addEventListener('click', function(){ ping('example'); });
     /* Arriving from a shared page's "Send this song from your own moment" button: the song is already filled in. */
     var from = params.get('from');
@@ -311,11 +325,18 @@ details[open] summary{margin-bottom:12px}
       if(!sp){ flag('src', diagnose($('src').value)); return; }
       if(t===null){ flag('time', $('time').value.trim() ? 'That time doesn\u2019t look right. Try 1:30, 90, or 1m30s.' : 'Enter a start time like 1:30, 90, or 1m30s.'); return; }
       var nt = $('noteIn').value.trim().slice(0,140);
+      var shorten = API ? fetch(API + '/links', {method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({track:sp.id, type:sp.type, t:t, n:nt, by:$('byIn').checked})})
+        .then(function(r){ return r.ok ? r.json() : Promise.reject(); }).then(function(d){ return d.id; }).catch(function(){ return null; })
+        : Promise.resolve(null);
       var extra = (nt ? '&n=' + encodeURIComponent(nt) : '') + ($('byIn').checked ? '&by=unisonarity' : '');
       var base = (location.protocol==='file:') ? location.href.split('?')[0] : location.origin + location.pathname;
-      var url = base + '?track=' + sp.id + (sp.type==='episode'?'&type=episode':'') + '&t=' + t + extra;
+      var longUrl = base + '?track=' + sp.id + (sp.type==='episode'?'&type=episode':'') + '&t=' + t + extra;
       ping('make-link', sp.type);
-      showShare(url, t, nt);
+      shorten.then(function(id){
+        if(id){ ping('short-link'); }
+        showShare(id ? base + '?c=' + id : longUrl, t, nt);
+      });
     });
   }
 
@@ -367,7 +388,7 @@ details[open] summary{margin-bottom:12px}
     $('play').hidden = false; $('footMake').hidden = true; $('footPlay').hidden = false;
     document.title = 'Cue: starts at ' + fmt(startSec);
     if(noteText){ var no = $('noteOut'); no.textContent = noteText; no.hidden = false; if(noteText.length > 90) no.classList.add('long'); $('play').classList.add('hasnote'); }
-    if(params.get('by') === 'unisonarity'){ $('byline').hidden = false; }
+    if(byU){ $('byline').hidden = false; }
     $('whenLabel').textContent = fmt(startSec);
     $('goLabel').textContent = fmt(startSec);
     $('open').href = 'https://open.spotify.com/' + type + '/' + id;
